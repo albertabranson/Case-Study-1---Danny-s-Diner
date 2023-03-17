@@ -1,0 +1,124 @@
+Case Study #1 - Danny's Diner
+Source: https://8weeksqlchallenge.com/case-study-1/
+-- 1. What is the total amount each customer spent at the restaurant?
+
+SELECT
+  dannys_diner.sales.customer_id, SUM(dannys_diner.menu.price) AS total_amount
+FROM dannys_diner.sales
+JOIN dannys_diner.menu on sales.product_id=menu.product_id 
+GROUP BY customer_id
+ORDER BY customer_id;
+
+customer_id	total_amount
+A	76
+B	74
+C	36
+-- 2. How many days has each customer visited the restaurant?
+SELECT
+SELECT
+customer_id, COUNT(DISTINCT order_date) AS days 
+FROM dannys_diner.sales
+GROUP BY customer_id;
+
+customer_id	days
+A	4
+B	6
+C	2
+
+-- 3. What was the first item from the menu purchased by each customer?
+SELECT
+ customer_id, product_name, order_date
+FROM dannys_diner.sales
+JOIN dannys_diner.menu on sales.product_id=menu.product_id 
+GROUP BY customer_id, order_date, sales.product_id, product_name
+ORDER BY order_date ASC;
+
+customer_id	product_name	order_date
+A	sushi	2021-01-01T00:00:00.000Z
+A	curry	2021-01-01T00:00:00.000Z
+B	curry	2021-01-01T00:00:00.000Z
+C	ramen	2021-01-01T00:00:00.000Z
+
+-- 4. What is the most purchased item on the menu and how many times was it purchased by all customers?
+SELECT
+  product_name, COUNT(order_date) AS number_of_purchases
+FROM dannys_diner.sales
+JOIN dannys_diner.menu on sales.product_id=menu.product_id 
+GROUP BY   product_name
+ORDER BY number_of_purchases DESC
+LIMIT 1;
+
+product_name	number_of_purchases
+ramen	8
+
+
+-- 5. Which item was purchased first by the customer after they became a member?
+SELECT
+  sales.customer_id, product_name, order_date, join_date
+FROM dannys_diner.sales
+JOIN dannys_diner.menu on sales.product_id=menu.product_id 
+JOIN dannys_diner.members on sales.customer_id=members.customer_id
+WHERE join_date<order_date
+ORDER BY order_date ASC;
+
+customer_id	product_name	order_date	join_date
+A	ramen	2021-01-10T00:00:00.000Z	2021-01-07T00:00:00.000Z
+B	sushi	2021-01-11T00:00:00.000Z	2021-01-09T00:00:00.000Z
+
+-- 6. Which item was purchased just before the customer became a member?
+SELECT
+  sales.customer_id, product_name, order_date, join_date
+FROM dannys_diner.sales
+JOIN dannys_diner.menu on sales.product_id=menu.product_id 
+JOIN dannys_diner.members on sales.customer_id=members.customer_id
+WHERE join_date>order_date
+ORDER BY order_date ASC;
+
+customer_id	product_name	order_date	join_date
+A	sushi	2021-01-01T00:00:00.000Z	2021-01-07T00:00:00.000Z
+A	curry	2021-01-01T00:00:00.000Z	2021-01-07T00:00:00.000Z
+B	curry	2021-01-01T00:00:00.000Z          2021-01-09T00:00:00.000Z
+
+-- 7. What is the total items and amount spent for each member before they became a member?
+SELECT
+  dannys_diner.sales.customer_id, SUM(dannys_diner.menu.price) AS total_amount_spent, COUNT(product_name) AS total_items
+FROM dannys_diner.sales
+JOIN dannys_diner.menu on sales.product_id=menu.product_id 
+JOIN dannys_diner.members on sales.customer_id=members.customer_id
+WHERE join_date>order_date
+GROUP BY sales.customer_id
+ORDER BY sales.customer_id;
+
+customer_id	total_amount_spent	total_items
+A	25	2
+B	40	3
+
+-- 8.  If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
+
+SELECT t.customer_id, SUM(total_amount_spent * CASE WHEN product_name = 'sushi' THEN 2 ELSE 1 END * 10)  AS points
+FROM
+(SELECT sales.customer_id, product_name, SUM(dannys_diner.menu.price) AS total_amount_spent
+FROM dannys_diner.sales
+JOIN dannys_diner.menu ON sales.product_id = menu.product_id
+GROUP BY sales.customer_id, product_name
+) t
+GROUP BY t.customer_id
+ORDER BY t.customer_id;
+
+customer_id	points
+A	860
+B	940
+C	360
+
+-- 9. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
+SELECT sales.customer_id, SUM(price * 2 * 10)  AS points
+FROM dannys_diner.sales
+JOIN dannys_diner.menu ON sales.product_id = menu.product_id
+JOIN dannys_diner.members on sales.customer_id=members.customer_id
+WHERE join_date<=order_date
+GROUP BY sales.customer_id
+ORDER BY sales.customer_id;
+
+customer_id	points
+A	1020
+B	680
